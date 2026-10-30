@@ -28,6 +28,13 @@ go.work.sum
 # env file
 .env
 
+# Build output
+bin/
+dist/
+
+# ZCode workspace state
+.zcode/
+
 # Editor/IDE
 # .idea/
 # .vscode/

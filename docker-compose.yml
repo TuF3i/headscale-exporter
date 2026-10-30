@@ -1,0 +1,17 @@
+services:
+  headscale-exporter:
+    build:
+      context: .
+      args:
+        VERSION: ${VERSION:-dev}
+        COMMIT: ${COMMIT:-none}
+        BUILD_DATE: ${BUILD_DATE:-unknown}
+    image: headscale-exporter:latest
+    container_name: headscale-exporter
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "9110:9110"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

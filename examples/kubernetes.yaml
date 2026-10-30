@@ -1,0 +1,116 @@
+# Kubernetes deployment for headscale-exporter.
+#
+# Prerequisites:
+#   1. Build and push the image (from a machine with Docker):
+#        docker build -t <registry>/headscale-exporter:latest .
+#        docker push <registry>/headscale-exporter:latest
+#      Then update the image field below.
+#   2. Create the Headscale API key on the server:
+#        headscale apikeys create --expiration 90d
+#
+# Create the secret from the CLI instead of committing a real key:
+#   kubectl -n headscale create secret generic headscale-exporter \
+#     --from-literal=HEADSCALE_URL=http://headscale.headscale.svc.cluster.local:8080 \
+#     --from-literal=HEADSCALE_API_KEY=<your-api-key>
+#
+# The Secret below is a placeholder; apply it only after editing, or create it
+# with kubectl and delete this block before applying.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: headscale
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: headscale-exporter
+  namespace: headscale
+  labels:
+    app.kubernetes.io/name: headscale-exporter
+type: Opaque
+stringData:
+  # Base URL of the Headscale server, without /api/v1.
+  # Adjust the DNS name to wherever Headscale runs in your cluster.
+  HEADSCALE_URL: http://headscale.headscale.svc.cluster.local:8080
+  # Placeholder - replace with a real key or create the Secret with kubectl.
+  HEADSCALE_API_KEY: replace-with-headscale-api-key
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: headscale-exporter
+  namespace: headscale
+  labels:
+    app.kubernetes.io/name: headscale-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: headscale-exporter
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: headscale-exporter
+      annotations:
+        # Annotation-based scraping for vanilla Prometheus configs. If you run
+        # prometheus-operator, use a ServiceMonitor instead (see README).
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9110"
+        prometheus.io/path: /metrics
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: headscale-exporter
+          # Replace with the image you built and pushed.
+          image: ghcr.io/TuF3i/headscale-exporter:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http-metrics
+              containerPort: 9110
+          envFrom:
+            - secretRef:
+                name: headscale-exporter
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http-metrics
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http-metrics
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: headscale-exporter
+  namespace: headscale
+  labels:
+    app.kubernetes.io/name: headscale-exporter
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: headscale-exporter
+  ports:
+    - name: http-metrics
+      port: 9110
+      targetPort: http-metrics

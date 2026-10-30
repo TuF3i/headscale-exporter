@@ -1,0 +1,16 @@
+# Optional recording rules.
+#
+# The exporter exposes headscale_users_online as a gauge sampled at the
+# Prometheus scrape interval. These rules keep one hourly value per peak and
+# average, which is useful when the raw samples have a shorter retention than
+# the history you want to display.
+
+groups:
+  - name: headscale-exporter
+    interval: 1h
+    rules:
+      - record: headscale:users_online:hourly_max
+        expr: max_over_time(headscale_users_online[1h])
+
+      - record: headscale:users_online:hourly_avg
+        expr: avg_over_time(headscale_users_online[1h])

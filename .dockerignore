@@ -1,0 +1,10 @@
+.git
+.zcode
+bin
+dist
+*.exe
+*.test
+*.out
+.env
+.env.*
+!.env.example

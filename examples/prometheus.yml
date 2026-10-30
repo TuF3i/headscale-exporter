@@ -1,0 +1,16 @@
+# Example Prometheus scrape configuration for headscale-exporter.
+# Merge this snippet into your existing prometheus.yml.
+
+scrape_configs:
+  - job_name: headscale-exporter
+    scrape_interval: 30s
+    scrape_timeout: 15s
+    static_configs:
+      - targets:
+          - 127.0.0.1:9110
+        labels:
+          service: headscale
+
+# Optional: load the hourly recording rules in headscale.rules.yml.
+# rule_files:
+#   - headscale.rules.yml
